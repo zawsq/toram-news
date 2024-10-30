@@ -26,7 +26,7 @@ class ToramListener:
     def __init__(self) -> None:
         self.base_url = "https://en.toram.jp/information/?type_code=all"
         self.base_selector = "#news > div.useBox > ul > li > a"
-        self.request_interval = 5
+        self.request_interval = 60
         self.local_tz = tzlocal.get_localzone()
         self.mongo_db = MongoDB()
         self.scraper = Scraper()
