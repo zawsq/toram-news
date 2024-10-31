@@ -18,7 +18,7 @@ class Scraper:
         url = f"https://en.toram.jp/information/detail/?information_id={news_id}"
         async with (
             aiohttp.ClientSession() as session,
-            session.get(url=url, ssl=False) as resp,
+            session.get(url=url) as resp,
         ):
             parse_text = fromstring(await resp.text())
 

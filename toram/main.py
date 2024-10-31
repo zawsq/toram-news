@@ -26,13 +26,13 @@ class ToramListener:
     def __init__(self) -> None:
         self.base_url = "https://en.toram.jp/information/?type_code=all"
         self.base_selector = "#news > div.useBox > ul > li > a"
-        self.request_interval = 60
+        self.request_interval = 100
         self.local_tz = tzlocal.get_localzone()
         self.mongo_db = MongoDB()
         self.scraper = Scraper()
 
     async def check_latest_news(self) -> list[str]:
-        async with aiohttp.ClientSession() as session, session.get(url=self.base_url, ssl=False) as resp:
+        async with aiohttp.ClientSession() as session, session.get(url=self.base_url) as resp:
             parse_text = fromstring(await resp.text())
 
         latest_news = parse_text.cssselect(self.base_selector)
@@ -60,8 +60,8 @@ class ToramListener:
             )
 
             if not news_ids_to_send:
-                await asyncio.sleep(self.request_interval)
                 logging.info("no news detected, sleeping...")
+                await asyncio.sleep(self.request_interval)
                 continue
 
             for i in news_ids_to_send:
