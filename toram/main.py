@@ -75,7 +75,7 @@ class ToramListener:
                 )
 
                 if send_webhook_status == 200:  # noqa: PLR2004
-                    successfully_ids.append(send_webhook_status)
+                    successfully_ids.append(i)
 
             await self.mongo_db.update_news_id(news_id=successfully_ids[-1])
 
