@@ -32,7 +32,10 @@ class ToramListener:
         self.scraper = Scraper()
 
     async def check_latest_news(self) -> list[str]:
-        async with aiohttp.ClientSession() as session, session.get(url=self.base_url) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session,
+            session.get(url=self.base_url) as resp,
+        ):
             parse_text = fromstring(await resp.text())
 
         latest_news = parse_text.cssselect(self.base_selector)
@@ -64,11 +67,17 @@ class ToramListener:
                 await asyncio.sleep(self.request_interval)
                 continue
 
+            successfully_ids = []
             for i in news_ids_to_send:
                 scrape_news_id = await self.scraper.get_toram_news(i)
-                await self.scraper.send_webhook(webhook_url=config.WEBHOOK_URL, news_data=scrape_news_id)
+                send_webhook_status = await self.scraper.send_webhook(
+                    webhook_url=config.WEBHOOK_URL, news_data=scrape_news_id,
+                )
 
-            await self.mongo_db.update_news_id(news_id=news_ids_to_send[-1])
+                if send_webhook_status == 200:  # noqa: PLR2004
+                    successfully_ids.append(send_webhook_status)
+
+            await self.mongo_db.update_news_id(news_id=successfully_ids[-1])
 
             await asyncio.sleep(self.request_interval)
 

@@ -1,5 +1,4 @@
 import re
-from typing import Any
 
 import aiohttp
 from discord_webhook import AsyncDiscordWebhook, DiscordEmbed
@@ -57,7 +56,7 @@ class Scraper:
         old_key = "Title"
         return {title if k == old_key else k: v for k, v in news_datas.items()}
 
-    async def send_webhook(self, webhook_url: str, news_data: dict[str, str]) -> Any:  # noqa: ANN401
+    async def send_webhook(self, webhook_url: str, news_data: dict[str, str]) -> int:
         webhook = AsyncDiscordWebhook(url=webhook_url)
         image_pattern = r"https?://[^\s]+?\.(?:png|jpeg|jpg)"
         multi_image_pattern = r"(Lv.+?)\n\n(https?://[^\s]+?\.(?:png|jpeg|jpg))"
@@ -88,4 +87,14 @@ class Scraper:
                 embed = DiscordEmbed(title=key, description=modified_value)
                 webhook.add_embed(embed)
 
-        return await webhook.execute()
+        execute = await webhook.execute()
+
+        if execute.status_code == 400:  # noqa: PLR2004
+            embed_median = len(webhook.embeds) // 2
+            divided_embed = [webhook.embeds[:embed_median], webhook.embeds[embed_median:]]
+
+            for i in divided_embed:
+                webhook.embeds = i
+                execute = await webhook.execute()
+
+        return execute.status_code
