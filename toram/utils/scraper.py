@@ -12,6 +12,7 @@ class Scraper:
         self.skip_src = {"#top"}
         self.attrib_classes = {"smallTitle news_title yellow": "Title"}
         self.skip_key = {"Note"}
+        self.max_size = "Embed size exceeds maximum size of 6000"
 
     async def get_toram_news(self, news_id: str) -> dict[str, str]:
         url = f"https://en.toram.jp/information/detail/?information_id={news_id}"
@@ -56,7 +57,7 @@ class Scraper:
         old_key = "Title"
         return {title if k == old_key else k: v for k, v in news_datas.items()}
 
-    async def send_webhook(self, webhook_url: str, news_data: dict[str, str]) -> int:
+    async def format_webhook(self, webhook_url: str, news_data: dict[str, str]) -> AsyncDiscordWebhook:
         webhook = AsyncDiscordWebhook(url=webhook_url)
         image_pattern = r"https?://[^\s]+?\.(?:png|jpeg|jpg)"
         multi_image_pattern = r"(Lv.+?)\n\n(https?://[^\s]+?\.(?:png|jpeg|jpg))"
@@ -64,7 +65,7 @@ class Scraper:
         for key, value in news_data.items():
             if key in self.skip_key:
                 continue
-            modified_value = value.replace('"', "**")
+            modified_value = (value.replace('"', "**"))[:4096]
 
             image_matches = re.findall(image_pattern, modified_value)
             multi_image_matches = re.findall(multi_image_pattern, modified_value)
@@ -87,14 +88,24 @@ class Scraper:
                 embed = DiscordEmbed(title=key, description=modified_value)
                 webhook.add_embed(embed)
 
-        execute = await webhook.execute()
+        return webhook
 
-        if execute.status_code == 400:  # noqa: PLR2004
-            embed_median = len(webhook.embeds) // 2
-            divided_embed = [webhook.embeds[:embed_median], webhook.embeds[embed_median:]]
+    async def send_webhook(self, webhook_url: str, news_data: dict[str, str]) -> int:
+        formatted_webhook = await self.format_webhook(webhook_url=webhook_url, news_data=news_data)
+
+        execute = await formatted_webhook.execute()
+
+        execute_info = execute.json().get("embeds")
+
+        if execute.status_code == 400 and execute_info[0] == self.max_size:  # noqa: PLR2004
+            chunk_size = 3
+            divided_embed = [
+                formatted_webhook.embeds[i : i + chunk_size]
+                for i in range(0, len(formatted_webhook.embeds), chunk_size)
+            ]
 
             for i in divided_embed:
-                webhook.embeds = i
-                execute = await webhook.execute()
+                formatted_webhook.embeds = i
+                execute = await formatted_webhook.execute()
 
         return execute.status_code

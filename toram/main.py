@@ -26,7 +26,7 @@ class ToramListener:
     def __init__(self) -> None:
         self.base_url = "https://en.toram.jp/information/?type_code=all"
         self.base_selector = "#news > div.useBox > ul > li > a"
-        self.request_interval = 100
+        self.request_interval = 300
         self.local_tz = tzlocal.get_localzone()
         self.mongo_db = MongoDB()
         self.scraper = Scraper()
@@ -71,13 +71,15 @@ class ToramListener:
             for i in news_ids_to_send:
                 scrape_news_id = await self.scraper.get_toram_news(i)
                 send_webhook_status = await self.scraper.send_webhook(
-                    webhook_url=config.WEBHOOK_URL, news_data=scrape_news_id,
+                    webhook_url=config.WEBHOOK_URL,
+                    news_data=scrape_news_id,
                 )
 
                 if send_webhook_status == 200:  # noqa: PLR2004
                     successfully_ids.append(i)
 
-            await self.mongo_db.update_news_id(news_id=successfully_ids[-1])
+            if successfully_ids:
+                await self.mongo_db.update_news_id(news_id=successfully_ids[-1])
 
             await asyncio.sleep(self.request_interval)
 
