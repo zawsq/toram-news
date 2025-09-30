@@ -100,7 +100,7 @@ class Scraper:
         execute_info = execute.json().get("embeds")
 
         if execute.status_code == 400 and execute_info[0] == self.max_size:  # noqa: PLR2004
-            chunk_size = 3
+            chunk_size = 2
             divided_embed = [
                 formatted_webhook.embeds[i : i + chunk_size]
                 for i in range(0, len(formatted_webhook.embeds), chunk_size)
