@@ -88,6 +88,8 @@ class Scraper:
                 embed = DiscordEmbed(title=key, description=modified_value)
                 webhook.add_embed(embed)
 
+        embed.set_footer(text="Created by Zaws | @moaiso")
+
         return webhook
 
     async def send_webhook(self, webhook_url: str, news_data: dict[str, str]) -> int:
